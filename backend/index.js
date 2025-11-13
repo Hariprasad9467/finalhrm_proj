@@ -1,5 +1,4 @@
 require('dotenv').config();
-// -------------------- IMPORTS -------------------- //
 const express = require('express');
 const http = require("http");
 const mongoose = require('mongoose');
@@ -27,12 +26,12 @@ const requestsRoutes = require('./routes/changeRequests');
 const uploadRoutes = require('./routes/upload');
 const payslipRoutes = require('./routes/payslip');
 
-
 // -------------------- EXPRESS APP -------------------- //
 const app = express();
-const server = http.createServer(app);
 const MONGO_URI = process.env.MONGO_URI; // MongoDB URI from .env
-const PORT = process.env.PORT || 5000;  
+const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+
 // -------------------- SOCKET.IO -------------------- //
 const io = new Server(server, {
   cors: {
@@ -42,7 +41,6 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-
 
 // ---------------- MIDDLEWARE ---------------- //
 app.use((req, res, next) => {
@@ -174,11 +172,6 @@ app.get('/get-employee-name/:employeeId', async (req, res) => {
   }
 });
 
-// ---------------- ROOT ROUTE (for testing Render) ---------------- //
-app.get('/', (req, res) => {
-  res.send('✅ HRM Backend is running successfully!');
-});
-
 // -------------------- SOCKET.IO (ONE-TO-ONE + GROUP CALLS) -------------------- //
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
@@ -224,78 +217,53 @@ io.on("connection", (socket) => {
   });
 
   // --- ROOM HANDLING FOR GROUP CALLS ---
-// ---------------- GROUP CALL HANDLING ---------------- //
-const rooms = {}; // roomId -> [userIds]
-
-socket.on("create-room", (data) => {
-  const { roomId, creator, target, isVideo } = data;
-  socket.join(roomId);
-  rooms[roomId] = rooms[roomId] || [];
-  rooms[roomId].push(creator);
-
-  // Send initial invite
-  io.to(target).emit("incoming-call", {
-    from: creator,
-    signal: { roomId, isVideo },
-  });
-  console.log(`🏠 Room created: ${roomId} by ${creator}`);
-});
-
-// Invite new user to existing room
-socket.on("add-participant", (data) => {
-  const { roomId, from, target, isVideo } = data;
-  io.to(target).emit("incoming-call", {
-    from,
-    signal: { roomId, isVideo },
-  });
-  console.log(`👥 ${from} invited ${target} to ${roomId}`);
-});
-
-// When a user accepts invitation → joins the room
-socket.on("join-room", (data) => {
-  const { roomId, userId } = data;
-  socket.join(roomId);
-
-  rooms[roomId] = rooms[roomId] || [];
-  if (!rooms[roomId].includes(userId)) {
-    rooms[roomId].push(userId);
-  }
-
-  // Notify existing users of the new participant
-  socket.to(roomId).emit("new-participant", { userId });
-
-  // Send back the list of existing users to the joining participant
-  socket.emit("existing-participants", {
-    roomId,
-    participants: rooms[roomId].filter((id) => id !== userId),
+  socket.on("create-room", (data) => {
+    const { roomId, creator, target, isVideo } = data;
+    socket.join(roomId);
+    io.to(target).emit("incoming-call", {
+      from: creator,
+      signal: { roomId, isVideo },
+    });
+    console.log(`🏠 Room created: ${roomId} by ${creator}`);
   });
 
-  console.log(`👤 ${userId} joined room ${roomId}`);
-});
+  socket.on("add-participant", (data) => {
+    const { roomId, from, target, isVideo } = data;
+    io.to(target).emit("incoming-call", {
+      from,
+      signal: { roomId, isVideo },
+    });
+    console.log(`👥 ${from} invited ${target} to ${roomId}`);
+  });
 
-// Relay SDP / ICE between peers
-socket.on("room-signal", (data) => {
-  const { roomId, from, to, signal } = data;
-  io.to(to).emit("room-signal", { from, signal });
-  console.log(`📡 Signal relayed in ${roomId} from ${from} → ${to}`);
-});
+  socket.on("join-room", (data) => {
+    const { roomId, userId } = data;
+    socket.join(roomId);
+    socket.to(roomId).emit("new-participant", { userId });
+    console.log(`👤 ${userId} joined room ${roomId}`);
+  });
 
-// Leave room
-socket.on("leave-room", (data) => {
-  const { roomId, userId } = data;
-  socket.leave(roomId);
-  if (rooms[roomId]) {
-    rooms[roomId] = rooms[roomId].filter((id) => id !== userId);
+  socket.on("send-room-signal", (data) => {
+    const { roomId, from, signal } = data;
+    socket.to(roomId).emit("room-signal", { from, signal });
+  });
+
+  socket.on("leave-room", (data) => {
+    const { roomId, userId } = data;
+    socket.leave(roomId);
     socket.to(roomId).emit("participant-left", { userId });
-  }
-  console.log(`🚪 ${userId} left ${roomId}`);
-});
-
+    console.log(`🚪 ${userId} left room ${roomId}`);
+  });
 
   // --- Disconnect ---
   socket.on("disconnect", () => {
     console.log("🔴 User disconnected:", socket.id);
   });
+});
+
+// ---------------- ROOT ROUTE (for testing Render) ---------------- //
+app.get('/', (req, res) => {
+  res.send('✅ HRM Backend is running successfully!');
 });
 
 // ---------------- CONNECT MONGODB & START SERVER ---------------- //

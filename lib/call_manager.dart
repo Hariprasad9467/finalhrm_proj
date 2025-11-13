@@ -1,7 +1,7 @@
-// lib/call_manager.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter/foundation.dart';
 
 typedef IncomingCallCallback = void Function(String fromId, Map signal);
 typedef RemoteStreamCallback = void Function(MediaStream stream);
@@ -9,15 +9,9 @@ typedef LocalStreamCallback = void Function(MediaStream stream);
 
 class CallManager {
   late IO.Socket socket;
-
-  // ✅ Single call connections
   RTCPeerConnection? _pc;
   MediaStream? _localStream;
   MediaStream? get localStream => _localStream;
-
-  // ✅ Group call maps
-  final Map<String, RTCPeerConnection> _pcMap = {};
-  final Map<String, MediaStream> _remoteStreams = {};
 
   final String serverUrl;
   final String currentUserId;
@@ -28,14 +22,14 @@ class CallManager {
   VoidCallback? onCallEnded;
 
   String? _currentTarget;
-  String? currentRoomId;
+  String? currentRoomId; // ✅ For group calls
 
   CallManager({
     required this.serverUrl,
     required this.currentUserId,
   });
 
-  /// ✅ Initialize socket connection
+  // ✅ Initialize socket connection
   Future<void> init() async {
     socket = IO.io(serverUrl, <String, dynamic>{
       'transports': ['websocket'],
@@ -48,7 +42,7 @@ class CallManager {
       debugPrint('✅ Connected to socket as $currentUserId');
     });
 
-    // ✅ Handle incoming single call
+    // ✅ Incoming call
     socket.on('incoming-call', (data) {
       try {
         final from = data['from'] as String;
@@ -59,7 +53,7 @@ class CallManager {
       }
     });
 
-    // ✅ Handle call accepted
+    // ✅ Call accepted
     socket.on('call-accepted', (data) async {
       try {
         final signal = Map<String, dynamic>.from(data as Map);
@@ -87,7 +81,7 @@ class CallManager {
       _cleanupPeer();
     });
 
-    // ✅ ICE candidates (single call)
+    // ✅ ICE candidates
     socket.on('ice-candidate', (data) async {
       try {
         final cand = Map<String, dynamic>.from(data['candidate'] ?? {});
@@ -102,56 +96,17 @@ class CallManager {
       }
     });
 
-    // ✅ Group call events
-
-    socket.on('existing-participants', (data) async {
-      final roomId = data['roomId'];
-      final participants = List<String>.from(data['participants']);
-      debugPrint('👥 Existing participants in $roomId: $participants');
-
-      for (final peerId in participants) {
-        await _createPeerForRoom(peerId, isVideo: true);
-      }
-    });
-
-    socket.on('new-participant', (data) async {
-      final newUserId = data['userId'];
-      debugPrint('🆕 New participant joined: $newUserId');
-      await _createPeerForRoom(newUserId, isVideo: true);
-    });
-
-    socket.on('room-signal', (data) async {
-      final from = data['from'];
-      final signal = Map<String, dynamic>.from(data['signal'] ?? {});
-      final sdp = signal['sdp'];
-      final type = signal['type'];
-      final candidate = signal['candidate'];
-
-      if (sdp != null && type != null) {
-        await _pcMap[from]?.setRemoteDescription(
-          RTCSessionDescription(sdp, type),
-        );
-      } else if (candidate != null) {
-        final ice = RTCIceCandidate(
-          candidate['candidate'],
-          candidate['sdpMid'],
-          candidate['sdpMLineIndex'],
-        );
-        await _pcMap[from]?.addCandidate(ice);
-      }
-    });
-
     socket.onDisconnect((_) {
       debugPrint('⚠ Socket disconnected');
     });
   }
 
-  /// ✅ Create Peer Connection (for 1-1 or room)
+  /// ✅ Create Peer Connection
   Future<RTCPeerConnection> _createPeerConnection(
     bool isVideo,
     String targetId,
   ) async {
-    final configuration = {
+    final configuration = <String, dynamic>{
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'}
       ]
@@ -159,6 +114,7 @@ class CallManager {
 
     final pc = await createPeerConnection(configuration);
 
+    // Handle ICE candidates
     pc.onIceCandidate = (RTCIceCandidate c) {
       if (c.candidate != null) {
         socket.emit('ice-candidate', {
@@ -172,6 +128,7 @@ class CallManager {
       }
     };
 
+    // Handle remote tracks
     pc.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
         final stream = event.streams.first;
@@ -214,37 +171,6 @@ class CallManager {
     debugPrint("👥 Invited $targetId to room $roomId");
   }
 
-  /// ✅ Create peer for group room participant
-  Future<void> _createPeerForRoom(String peerId, {required bool isVideo}) async {
-    final pc = await _createPeerConnection(isVideo, peerId);
-    _pcMap[peerId] = pc;
-
-    if (_localStream != null) {
-      for (var track in _localStream!.getTracks()) {
-        await pc.addTrack(track, _localStream!);
-      }
-    }
-
-    final offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    socket.emit('room-signal', {
-      'to': peerId,
-      'from': currentUserId,
-      'roomId': currentRoomId,
-      'signal': {'sdp': offer.sdp, 'type': offer.type},
-    });
-
-    pc.onTrack = (event) {
-      if (event.streams.isNotEmpty) {
-        final stream = event.streams.first;
-        _remoteStreams[peerId] = stream;
-        debugPrint('🎬 Received remote stream from $peerId');
-        onRemoteStream?.call(stream);
-      }
-    };
-  }
-
   /// ✅ Start a call (caller)
   Future<void> startCall({
     required String targetId,
@@ -257,12 +183,14 @@ class CallManager {
     onLocalStream?.call(_localStream!);
 
     _pc = await _createPeerConnection(isVideo, targetId);
+
     if (_localStream != null) {
       for (var track in _localStream!.getTracks()) {
         await _pc!.addTrack(track, _localStream!);
       }
     }
 
+    // ✅ Create room for group call
     createRoom(targetId);
 
     final offer = await _pc!.createOffer();
@@ -292,15 +220,18 @@ class CallManager {
       'audio': true,
       'video': isVideo,
     });
+
     onLocalStream?.call(_localStream!);
 
     _pc = await _createPeerConnection(isVideo, fromId);
+
     if (_localStream != null) {
       for (var track in _localStream!.getTracks()) {
         await _pc!.addTrack(track, _localStream!);
       }
     }
 
+    // ✅ Save room ID if provided
     if (signal['roomId'] != null) {
       currentRoomId = signal['roomId'];
       debugPrint("📦 Joined existing room: $currentRoomId");
@@ -340,7 +271,7 @@ class CallManager {
     _cleanupPeer();
   }
 
-  /// ✅ Reject call
+  /// ✅ Reject incoming call
   void rejectCall(String toId) {
     try {
       socket.emit('reject-call', {'to': toId, 'from': currentUserId});
@@ -351,37 +282,22 @@ class CallManager {
     _cleanupPeer();
   }
 
-  /// ✅ Cleanup all peer connections
+  /// ✅ Cleanup peer connection and streams
   void _cleanupPeer() {
     try {
       _pc?.close();
-      _pc = null;
-
-       _pcMap.forEach((_, pc) => pc.close());
-  _pcMap.clear();
-
-      for (final pc in _pcMap.values) {
-        pc.close();
-      }
-      _pcMap.clear();
-
-      for (final stream in _remoteStreams.values) {
-        stream.getTracks().forEach((t) => t.stop());
-        stream.dispose();
-      }
-      _remoteStreams.clear();
-
+    } catch (_) {}
+    try {
       _localStream?.getTracks().forEach((t) => t.stop());
       _localStream?.dispose();
-      _localStream = null;
-      _currentTarget = null;
-      currentRoomId = null;
-    } catch (e) {
-      debugPrint('⚠ cleanup error: $e');
-    }
+    } catch (_) {}
+    _pc = null;
+    _localStream = null;
+    _currentTarget = null;
+    currentRoomId = null;
   }
 
-  /// ✅ Dispose socket
+  /// ✅ Dispose
   void dispose() {
     try {
       socket.dispose();

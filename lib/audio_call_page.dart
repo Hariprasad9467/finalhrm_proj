@@ -102,7 +102,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
     });
   }
 
-  /// 🎙️ Mute / Unmute
+  /// 🎙 Mute / Unmute
   void _toggleMute() {
     final stream = _callManager.localStream;
     if (stream == null) {
@@ -277,7 +277,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // 🎙️ Mute / Unmute
+                  // 🎙 Mute / Unmute
                   CircleAvatar(
                     backgroundColor: _isMuted ? Colors.orange : Colors.blue,
                     radius: 28,
