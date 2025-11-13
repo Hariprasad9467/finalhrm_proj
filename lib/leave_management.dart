@@ -37,7 +37,7 @@ class _LeaveManagementState extends State<LeaveManagement> {
     throw Exception("Employee ID not found");
   }
 
-  final String fetchUrl = 'http://localhost:5000/apply/fetch/$employeeId';
+  final String fetchUrl = 'https://finalhrm-proj.onrender.com/apply/fetch/$employeeId';
   print("👉 Fetching leaves from: $fetchUrl");
 
   final response = await http.get(Uri.parse(fetchUrl));
@@ -65,7 +65,7 @@ class _LeaveManagementState extends State<LeaveManagement> {
     if (employeeId == null) return;
 
     final String deleteUrl =
-        'http://localhost:5000/apply/delete/$employeeId/$leaveId';
+        'https://finalhrm-proj.onrender.com/apply/delete/$employeeId/$leaveId';
     print('🔗 Deleting leave via: $deleteUrl');
 
     final response = await http.delete(Uri.parse(deleteUrl));

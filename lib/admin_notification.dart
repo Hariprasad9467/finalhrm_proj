@@ -85,7 +85,7 @@ try {
   /// 🔹 Fetch SMS Notifications
   Future<void> fetchSmsNotifications() async {
     final uri = Uri.parse(
-        "http://localhost:5000/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
+        "https://finalhrm-proj.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -109,7 +109,7 @@ try {
   Future<void> fetchPerformanceNotifications() async {
     final uri = Uri.parse(
         //"http://localhost:5000/api/notifications/$selectedMonth/${widget.empId}");
-        "http://localhost:5000/notifications/performance/admin/$selectedMonth/${widget.empId}");
+        "https://finalhrm-proj.onrender.com/notifications/performance/admin/$selectedMonth/${widget.empId}");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -147,7 +147,7 @@ try {
   }
   Future<void> fetchHolidayNotifications() async {
   final uri = Uri.parse(
-      "http://localhost:5000/notifications/holiday/admin/$selectedMonth");
+      "https://finalhrm-proj.onrender.com/notifications/holiday/admin/$selectedMonth");
   final resp = await http.get(uri);
 
   if (resp.statusCode == 200) {

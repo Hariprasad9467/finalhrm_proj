@@ -4,7 +4,7 @@ import '../models/leave.dart';
 
 class ApiService {
   // Use your local server IP and correct port
-  static const String baseUrl = 'http://localhost:5000/api/leave';
+  static const String baseUrl = 'https://finalhrm-proj.onrender.com/api/leave';
 
   static Future<List<Leave>> fetchLeaves() async {
     final res = await http.get(Uri.parse(baseUrl));

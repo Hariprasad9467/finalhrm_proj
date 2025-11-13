@@ -67,7 +67,7 @@ class ReportsAnalyticsPage extends StatefulWidget {
 }
 
 class _ReportsAnalyticsPageState extends State<ReportsAnalyticsPage> {
-  final String apiBase = 'http://localhost:5000';
+  final String apiBase = 'https://finalhrm-proj.onrender.com';
   final String listPath = '/reports';
   final String detailsPath = '/reports';
 

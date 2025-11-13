@@ -71,7 +71,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     try {
       final response = await http.get(
-        Uri.parse("http://localhost:5000/get-employee-name/$employeeId"),
+        Uri.parse("https://finalhrm-proj.onrender.com/get-employee-name/$employeeId"),
       );
 
       if (response.statusCode == 200) {
@@ -105,7 +105,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final year = DateTime.now().year;
       final url =
-          "http://localhost:5000/apply/leave-balance/$employeeId?year=$year";
+          "https://finalhrm-proj.onrender.com/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -143,7 +143,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final response = await http.get(
         Uri.parse(
           // Pass both role and ID to the backend
-          "http://localhost:5000/apply/pending-count?approver=$userRole&approverId=$employeeId",
+          "https://finalhrm-proj.onrender.com/apply/pending-count?approver=$userRole&approverId=$employeeId",
         ),
       );
 
@@ -164,7 +164,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _deleteEmployeeComment(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("http://localhost:5000/review-decision/$id"),
+        Uri.parse("https://finalhrm-proj.onrender.com/review-decision/$id"),
       );
 
       if (response.statusCode == 200) {
@@ -191,7 +191,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-          "http://localhost:5000/review-decision/feedback?positions=employee,intern",
+          "https://finalhrm-proj.onrender.com/review-decision/feedback?positions=employee,intern",
         ),
         headers: {"Accept": "application/json"},
       );

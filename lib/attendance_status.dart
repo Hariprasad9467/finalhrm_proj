@@ -67,7 +67,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
  Future<void> fetchLatestStatus() async {
   final employeeId = Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
-  var url = Uri.parse('http://localhost:5000/attendance/attendance/status/$employeeId');
+  var url = Uri.parse('https://finalhrm-proj.onrender.com/attendance/attendance/status/$employeeId');
 
   try {
     var response = await http.get(url);
@@ -143,7 +143,7 @@ void startTotalBreakMonitor() {
       final employeeId =
           Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
       final url = Uri.parse(
-          'http://localhost:5000/attendance/attendance/status/$employeeId');
+          'https://finalhrm-proj.onrender.com/attendance/attendance/status/$employeeId');
       final response = await http.get(url);
 
       if (response.statusCode != 200) return;
@@ -220,7 +220,7 @@ void startTotalBreakMonitor() {
     final employeeId =
         Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
     var url =
-        Uri.parse('http://localhost:5000/attendance/attendance/mark/$employeeId');
+        Uri.parse('https://finalhrm-proj.onrender.com/attendance/attendance/mark/$employeeId');
 
     var body = {
       'date': getCurrentDate(),
@@ -253,7 +253,7 @@ void startTotalBreakMonitor() {
     final employeeId =
         Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
     var url = Uri.parse(
-        'http://localhost:5000/attendance/attendance/update/$employeeId');
+        'https://finalhrm-proj.onrender.com/attendance/attendance/update/$employeeId');
 
     var body = {
       'date': getCurrentDate(),
@@ -289,7 +289,7 @@ void startTotalBreakMonitor() {
       final employeeId =
           Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
       var url = Uri.parse(
-          'http://localhost:5000/attendance/attendance/history/$employeeId');
+          'https://finalhrm-proj.onrender.com/attendance/attendance/history/$employeeId');
       var response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -492,7 +492,7 @@ Future<bool> showLoginReasonDialog() async {
       });
 
       try {
-        var url = Uri.parse('http://localhost:5000/attendance/attendance/update/$employeeId');
+        var url = Uri.parse('https://finalhrm-proj.onrender.com/attendance/attendance/update/$employeeId');
         var body = jsonEncode({
           'date': getCurrentDate(),
           'breakTime': breakStart,
@@ -537,7 +537,7 @@ Future<bool> showLoginReasonDialog() async {
     });
 
     try {
-      var url = Uri.parse('http://localhost:5000/attendance/attendance/update/$employeeId');
+      var url = Uri.parse('https://finalhrm-proj.onrender.com/attendance/attendance/update/$employeeId');
       var body = jsonEncode({
         'date': getCurrentDate(),
         'breakTime': breakEnd,

@@ -45,7 +45,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
   void _setupCallManager() {
     _callManager = CallManager(
-      serverUrl: 'http://localhost:5000',
+      serverUrl: 'https://finalhrm-proj.onrender.com',
       currentUserId: widget.currentUserId,
     );
 

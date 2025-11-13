@@ -88,7 +88,7 @@ class _EmpPayrollState extends State<EmpPayroll> {
 Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
   try {
     final response = await http.get(
-      Uri.parse("http://localhost:5000/attendance/attendance/history/$employeeId"),
+      Uri.parse("https://finalhrm-proj.onrender.com/attendance/attendance/history/$employeeId"),
     );
 
     if (response.statusCode == 200) {
@@ -140,7 +140,7 @@ Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5000/get-multiple-payslips'),
+        Uri.parse('https://finalhrm-proj.onrender.com/get-multiple-payslips'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'year': selectedYear,

@@ -31,7 +31,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
   Future<void> fetchEmployees() async {
     try {
       final response = await http.get(
-        Uri.parse("http://localhost:5000/api/employees"),
+        Uri.parse("https://finalhrm-proj.onrender.com/api/employees"),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -77,7 +77,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
   Future<void> _deleteEmployee(String employeeId) async {
     try {
       final response = await http.delete(
-        Uri.parse("http://localhost:5000/api/employees/$employeeId"),
+        Uri.parse("https://finalhrm-proj.onrender.com/api/employees/$employeeId"),
       );
 
       if (response.statusCode == 200) {
@@ -218,7 +218,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                           : pickedImageFile != null
                           ? Image.file(pickedImageFile!, fit: BoxFit.cover)
                           : Image.network(
-                              "http://localhost:5000${emp["employeeImage"]}",
+                              "https://finalhrm-proj.onrender.com${emp["employeeImage"]}",
                               fit: BoxFit.cover,
                             ),
                     ),
@@ -237,7 +237,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                   var request = http.MultipartRequest(
                     'PUT',
                     Uri.parse(
-                      "http://localhost:5000/api/employees/${idController.text}",
+                      "https://finalhrm-proj.onrender.com/api/employees/${idController.text}",
                     ),
                   );
                   request.fields['employeeName'] = nameController.text;
@@ -580,7 +580,7 @@ class _EmployeeDataTableState extends State<_EmployeeDataTable> {
                           onPressed: () async {
                             final empId = emp["employeeId"];
                             final url = Uri.parse(
-                              "http://localhost:5000/apply/fetch/$empId",
+                              "https://finalhrm-proj.onrender.com/apply/fetch/$empId",
                             );
                             try {
                               final res = await http.get(url);

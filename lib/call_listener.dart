@@ -20,7 +20,7 @@ class _CallListenerState extends State<CallListener> {
   @override
   void initState() {
     super.initState();
-    _callManager = CallManager(serverUrl: 'http://localhost:5000', currentUserId: widget.currentUserId);
+    _callManager = CallManager(serverUrl: 'https://finalhrm-proj.onrender.com', currentUserId: widget.currentUserId);
 
     _callManager.onIncomingCall = (fromId, signal) {
       final isVideo = signal['isVideo'] == true;

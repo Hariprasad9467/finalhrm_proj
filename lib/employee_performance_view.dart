@@ -20,7 +20,7 @@ class _EmployeePerformanceViewState extends State<EmployeePerformanceView> {
   }
 
   Future<void> fetchReviews() async {
-    final url = Uri.parse('http://localhost:5000/perform/performance/get-reviews/${widget.employeeId}');
+    final url = Uri.parse('https://finalhrm-proj.onrender.com/perform/performance/get-reviews/${widget.employeeId}');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
