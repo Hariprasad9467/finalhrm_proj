@@ -1,0 +1,11 @@
+
+services:
+  - type: web
+    name: my-backend
+    env: node
+    plan: free
+    branch: master
+    buildCommand: npm install
+    startCommand: node index.js
+    workingDir: backend
+    autoDeploy: true
