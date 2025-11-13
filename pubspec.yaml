@@ -1,0 +1,47 @@
+name: zeai_project
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  file_picker: ^8.0.0
+  font_awesome_flutter: ^10.7.0
+  percent_indicator: ^4.2.2
+  table_calendar: ^3.0.9
+  http: ^0.13.6
+  intl: ^0.19.0
+  http_parser: ^4.0.2
+  image_picker: ^1.1.1
+  universal_io: ^2.2.2
+  pdf: ^3.10.4
+  printing: ^5.11.0
+  provider: ^6.1.1
+  cupertino_icons: ^1.0.8
+  badges: ^3.1.2
+  url_launcher: ^6.2.6
+  audioplayers: ^6.1.0
+  flutter_webrtc: ^1.2.0
+  socket_io_client: ^2.0.3
+    
+    
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+    
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/event-png/
+    - assets/emp-directory/ 
+    - assets/sounds/alert.mp3
