@@ -40,7 +40,14 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
+
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
+
+// Add near top of file
+const activeUsers = new Map(); // map employeeId -> socket.id
 
 // ---------------- MIDDLEWARE ---------------- //
 app.use((req, res, next) => {
@@ -179,16 +186,28 @@ io.on("connection", (socket) => {
   // --- Basic Join ---
   socket.on("join", (employeeId) => {
     socket.join(employeeId);
+    // 🔴 NEW: Store user mapping for WebRTC signaling
+    activeUsers.set(employeeId, socket.id);
     console.log(`👤 ${employeeId} joined personal room`);
   });
 
   // --- Direct Calls ---
   socket.on("call-user", (data) => {
-    io.to(data.target).emit("incoming-call", {
+  const target = data.target;
+  const targetSocketId = activeUsers.get(target);
+  if (targetSocketId) {
+    io.to(targetSocketId).emit("incoming-call", {
       from: data.from,
       signal: data.signal,
     });
-  });
+  } else {
+    // fallback to room (if you previously joined users into a room named by employeeId)
+    io.to(target).emit("incoming-call", {
+      from: data.from,
+      signal: data.signal,
+    });
+  }
+});
 
   socket.on("answer-call", (data) => {
     io.to(data.to).emit("call-accepted", data.signal);
@@ -211,9 +230,86 @@ io.on("connection", (socket) => {
   });
 
   // --- ICE Relay ---
-  socket.on("ice-candidate", (data) => {
-    const { to, candidate } = data;
-    if (to && candidate) io.to(to).emit("ice-candidate", { candidate });
+socket.on("ice-candidate", (data) => {
+  const { to, candidate } = data;
+  if (to && candidate) {
+    const targetSocketId = activeUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("ice-candidate", { candidate });
+    } else {
+      io.to(to).emit("ice-candidate", { candidate });
+    }
+    console.log(`🧊 ICE candidate relayed to ${to}`);
+  }
+});
+
+
+  // 🔴 NEW: WebRTC Offer Handler - CRITICAL FOR LAPTOP-TO-LAPTOP
+  socket.on("offer", (data) => {
+    const { to, from, offer, roomId } = data;
+    console.log(`📤 Offer sent: ${from} -> ${to}`);
+    
+    const targetSocketId = activeUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("offer", {
+        from,
+        offer,
+        roomId
+      });
+      console.log(`✅ Offer delivered to ${to}`);
+    } else {
+      console.log(`❌ Cannot send offer, ${to} not found`);
+      socket.emit("user-offline", { userId: to });
+    }
+  });
+
+  // 🔴 NEW: WebRTC Answer Handler - CRITICAL FOR LAPTOP-TO-LAPTOP
+  socket.on("answer", (data) => {
+    const { to, from, answer, roomId } = data;
+    console.log(`📤 Answer sent: ${from} -> ${to}`);
+    
+    const targetSocketId = activeUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("answer", {
+        from,
+        answer,
+        roomId
+      });
+      console.log(`✅ Answer delivered to ${to}`);
+    } else {
+      console.log(`❌ Cannot send answer, ${to} not found`);
+    }
+  });
+
+  // 🔴 NEW: Call Acceptance Handler (for proper signaling flow)
+  socket.on("call-accepted", (data) => {
+    const { to, from, roomId } = data;
+    console.log(`✅ Call accepted: ${from} -> ${to}`);
+    
+    const targetSocketId = activeUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-accepted", { from, roomId });
+    }
+  });
+
+  // 🔴 NEW: Improved Call Initiation (better than existing call-user)
+  socket.on("initiate-call", (data) => {
+    const { to, from, roomId, callerName, isVideo } = data;
+    console.log(`📞 Call initiated: ${from} -> ${to}, Room: ${roomId}`);
+    
+    const targetSocketId = activeUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("incoming-call", {
+        from,
+        roomId,
+        callerName: callerName || from,
+        isVideo: isVideo !== false
+      });
+      console.log(`🔔 Incoming call sent to ${to}`);
+    } else {
+      console.log(`❌ User ${to} not online`);
+      socket.emit("user-offline", { userId: to });
+    }
   });
 
   // --- ROOM HANDLING FOR GROUP CALLS ---
@@ -256,11 +352,18 @@ io.on("connection", (socket) => {
   });
 
   // --- Disconnect ---
-  socket.on("disconnect", () => {
-    console.log("🔴 User disconnected:", socket.id);
-  });
+ socket.on("disconnect", () => {
+  for (const [userId, socketId] of activeUsers.entries()) {
+    if (socketId === socket.id) {
+      activeUsers.delete(userId);
+      console.log(`🔴 User disconnected: ${userId} (${socket.id})`);
+      break;
+    }
+  }
+  console.log(`🔴 Socket disconnected: ${socket.id}`);
 });
 
+});
 // ---------------- ROOT ROUTE (for testing Render) ---------------- //
 app.get('/', (req, res) => {
   res.send('✅ HRM Backend is running successfully!');
