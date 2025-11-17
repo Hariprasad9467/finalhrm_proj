@@ -35,8 +35,9 @@ const server = http.createServer(app);
 // -------------------- SOCKET.IO -------------------- //
 const io = new Server(server, {
   cors: {
-    origin: 
+    origin: [
       "https://hrm-zeai.netlify.app",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
