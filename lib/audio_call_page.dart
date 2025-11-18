@@ -49,23 +49,40 @@ class _AudioCallPageState extends State<AudioCallPage> {
       currentUserId: widget.currentUserId,
     );
 
-    // 🎧 Local preview or mic control
+    // 🔴 FIXED: Local preview with video tracks logging
     _callManager.onLocalStream = (stream) {
       setState(() {
         if (widget.isVideo) {
           _localRenderer.srcObject = stream;
+          debugPrint(
+            '📹 Local video tracks: ${stream.getVideoTracks().length}',
+          );
+          debugPrint(
+            '🎧 Local audio tracks: ${stream.getAudioTracks().length}',
+          );
         }
       });
     };
 
-    // 🎧 Always play remote audio/video
+    // 🔴 CRITICAL FIX: Always set remote stream for both audio and video
     _callManager.onRemoteStream = (stream) {
       setState(() {
-        if (widget.isVideo) {
-          _remoteRenderer.srcObject = stream;
-        } else {
-          _remoteRenderer.srcObject = stream; // for audio playback
+        // Always set remote stream (works for both audio and video)
+        _remoteRenderer.srcObject = stream;
+
+        // 🔴 DEBUG: Log tracks to verify
+        final audioTracks = stream.getAudioTracks().length;
+        final videoTracks = stream.getVideoTracks().length;
+        debugPrint('🎧 Remote audio tracks: $audioTracks');
+        debugPrint('📹 Remote video tracks: $videoTracks');
+
+        // Verify tracks are enabled
+        for (var track in stream.getTracks()) {
+          debugPrint(
+            '   ${track.kind}: enabled=${track.enabled}, muted=${track.muted}',
+          );
         }
+
         _connected = true;
       });
     };
@@ -82,13 +99,13 @@ class _AudioCallPageState extends State<AudioCallPage> {
     await _callManager.init();
 
     if (widget.isCaller) {
-      // Caller creates offer
+      // 🔴 Caller creates offer (now waits for accept before media)
       await _callManager.startCall(
         targetId: widget.targetUserId,
         isVideo: widget.isVideo,
       );
     } else if (widget.offerSignal != null) {
-      // Receiver answers
+      // 🔴 Receiver answers
       await _callManager.answerCall(
         fromId: widget.targetUserId,
         signal: widget.offerSignal!,
@@ -128,9 +145,9 @@ class _AudioCallPageState extends State<AudioCallPage> {
       await Helper.setSpeakerphoneOn(!_isSpeakerOn);
       setState(() => _isSpeakerOn = !_isSpeakerOn);
 
-      debugPrint(_isSpeakerOn
-          ? '🔊 Speaker turned ON'
-          : '🔈 Speaker turned OFF');
+      debugPrint(
+        _isSpeakerOn ? '🔊 Speaker turned ON' : '🔈 Speaker turned OFF',
+      );
     } catch (e) {
       debugPrint("⚠ Speaker toggle error: $e");
     }
@@ -138,14 +155,14 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
   /// ➕ Invite another participant to the ongoing call
   void _inviteParticipant() async {
-    final TextEditingController _userIdController = TextEditingController();
+    final TextEditingController userIdController = TextEditingController();
 
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Add Participant"),
         content: TextField(
-          controller: _userIdController,
+          controller: userIdController,
           decoration: const InputDecoration(
             labelText: "Enter user ID to invite",
           ),
@@ -158,7 +175,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
           ElevatedButton(
             child: const Text("Invite"),
             onPressed: () {
-              final newUserId = _userIdController.text.trim();
+              final newUserId = userIdController.text.trim();
               if (newUserId.isNotEmpty) {
                 _callManager.inviteParticipant(
                   targetId: newUserId,
@@ -195,10 +212,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: Colors.deepPurple,
-      ),
+      appBar: AppBar(title: Text(title), backgroundColor: Colors.deepPurple),
       body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -209,17 +223,19 @@ class _AudioCallPageState extends State<AudioCallPage> {
                   ? Stack(
                       alignment: Alignment.center,
                       children: [
+                        // 🔴 Remote video (full screen)
                         Positioned.fill(
                           child: Container(
                             color: Colors.black,
                             child: RTCVideoView(
                               _remoteRenderer,
                               mirror: false,
-                              objectFit:
-                                  RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                              objectFit: RTCVideoViewObjectFit
+                                  .RTCVideoViewObjectFitCover,
                             ),
                           ),
                         ),
+                        // 🔴 Local video preview (small, top-right)
                         Positioned(
                           right: 16,
                           top: 16,
@@ -234,8 +250,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
                             child: RTCVideoView(
                               _localRenderer,
                               mirror: true,
-                              objectFit:
-                                  RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                              objectFit: RTCVideoViewObjectFit
+                                  .RTCVideoViewObjectFitCover,
                             ),
                           ),
                         ),
@@ -259,8 +275,8 @@ class _AudioCallPageState extends State<AudioCallPage> {
                 widget.isCaller
                     ? 'Calling ${widget.targetUserId}...'
                     : _connected
-                        ? 'Connected'
-                        : 'Connecting...',
+                    ? 'Connected'
+                    : 'Connecting...',
                 style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
             ),
@@ -292,8 +308,7 @@ class _AudioCallPageState extends State<AudioCallPage> {
 
                   // 🔊 Speaker on/off
                   CircleAvatar(
-                    backgroundColor:
-                        _isSpeakerOn ? Colors.green : Colors.grey,
+                    backgroundColor: _isSpeakerOn ? Colors.green : Colors.grey,
                     radius: 28,
                     child: IconButton(
                       icon: Icon(
@@ -323,9 +338,12 @@ class _AudioCallPageState extends State<AudioCallPage> {
                     child: IconButton(
                       icon: const Icon(Icons.call_end, color: Colors.white),
                       onPressed: () {
-                        _callManager.endCall(forceTargetId: widget.targetUserId);
-                        Navigator.of(context)
-                            .popUntil((route) => route.isFirst);
+                        _callManager.endCall(
+                          forceTargetId: widget.targetUserId,
+                        );
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       },
                     ),
                   ),
@@ -338,3 +356,4 @@ class _AudioCallPageState extends State<AudioCallPage> {
     );
   }
 }
+

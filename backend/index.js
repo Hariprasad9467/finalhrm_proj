@@ -28,8 +28,8 @@ const payslipRoutes = require('./routes/payslip');
 
 // -------------------- EXPRESS APP -------------------- //
 const app = express();
-const MONGO_URI = process.env.MONGO_URI; // MongoDB URI from .env
 const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI; // MongoDB URI from .env
 const server = http.createServer(app);
 
 // -------------------- SOCKET.IO -------------------- //
@@ -194,21 +194,11 @@ io.on("connection", (socket) => {
 
   // --- Direct Calls ---
   socket.on("call-user", (data) => {
-  const target = data.target;
-  const targetSocketId = activeUsers.get(target);
-  if (targetSocketId) {
-    io.to(targetSocketId).emit("incoming-call", {
+    io.to(data.target).emit("incoming-call", {
       from: data.from,
       signal: data.signal,
     });
-  } else {
-    // fallback to room (if you previously joined users into a room named by employeeId)
-    io.to(target).emit("incoming-call", {
-      from: data.from,
-      signal: data.signal,
-    });
-  }
-});
+  });
 
   socket.on("answer-call", (data) => {
     io.to(data.to).emit("call-accepted", data.signal);
@@ -231,19 +221,14 @@ io.on("connection", (socket) => {
   });
 
   // --- ICE Relay ---
-socket.on("ice-candidate", (data) => {
-  const { to, candidate } = data;
-  if (to && candidate) {
-    const targetSocketId = activeUsers.get(to);
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("ice-candidate", { candidate });
-    } else {
+  socket.on("ice-candidate", (data) => {
+    const { to, candidate } = data;
+    if (to && candidate) {
       io.to(to).emit("ice-candidate", { candidate });
+      // 🔴 NEW: Added logging
+      console.log(`🧊 ICE candidate relayed to ${to}`);
     }
-    console.log(`🧊 ICE candidate relayed to ${to}`);
-  }
-});
-
+  });
 
   // 🔴 NEW: WebRTC Offer Handler - CRITICAL FOR LAPTOP-TO-LAPTOP
   socket.on("offer", (data) => {
@@ -292,6 +277,21 @@ socket.on("ice-candidate", (data) => {
       io.to(targetSocketId).emit("call-accepted", { from, roomId });
     }
   });
+
+  // 🔴 NEW: Handle call accepted notification
+socket.on("call-accepted-by-receiver", (data) => {
+  const { to, from, isVideo } = data;
+  console.log(`✅ Call accepted by ${from}, notifying ${to}`);
+  
+  const targetSocketId = activeUsers.get(to);
+  if (targetSocketId) {
+    io.to(targetSocketId).emit("call-accepted-by-receiver", {
+      from,
+      isVideo: isVideo !== false
+    });
+    console.log(`📢 Acceptance notification sent to ${to}`);
+  }
+});
 
   // 🔴 NEW: Improved Call Initiation (better than existing call-user)
   socket.on("initiate-call", (data) => {
@@ -353,17 +353,17 @@ socket.on("ice-candidate", (data) => {
   });
 
   // --- Disconnect ---
- socket.on("disconnect", () => {
-  for (const [userId, socketId] of activeUsers.entries()) {
-    if (socketId === socket.id) {
-      activeUsers.delete(userId);
-      console.log(`🔴 User disconnected: ${userId} (${socket.id})`);
-      break;
+  socket.on("disconnect", () => {
+    // 🔴 NEW: Remove user from active users map
+    for (const [userId, socketId] of activeUsers.entries()) {
+      if (socketId === socket.id) {
+        activeUsers.delete(userId);
+        console.log(`🔴 User disconnected: ${userId} (${socket.id})`);
+        break;
+      }
     }
-  }
-  console.log(`🔴 Socket disconnected: ${socket.id}`);
-});
-
+    console.log("🔴 User disconnected:", socket.id);
+  });
 });
 // ---------------- ROOT ROUTE (for testing Render) ---------------- //
 app.get('/', (req, res) => {
